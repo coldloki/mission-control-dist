@@ -24,7 +24,7 @@ A personal command center for tracking tasks, projects, and custom tooling workf
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-username/mission-control.git
+git clone https://github.com/coldloki/mission-control-dist.git
 cd mission-control
 
 # 2. Run the setup script
