@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control - SQLite Integration Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .status-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .status-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .sync-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px 0;
+        }
+        
+        .sync-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .sync-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .tasks-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .tasks-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .tasks-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .tasks-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status-badge.todo {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .status-badge.in_progress {
+            background: #cfe2ff;
+            color: #084298;
+        }
+        
+        .status-badge.done {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        
+        .priority-badge.critical { background: #ff4757; color: white; }
+        .priority-badge.high { background: #ffa502; color: white; }
+        .priority-badge.medium { background: #7bed9f; color: #2c3e50; }
+        .priority-badge.low { background: #a4b0be; color: white; }
+        
+        select {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        
+        .instructions ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        .instructions li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Mission Control - SQLite Integration</h1>
+        
+        <div class="status-card">
+            <h2>📊 System Status</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-value" id="taskCount">-</div>
+                    <div class="status-label">Total Tasks</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="doneCount">-</div>
+                    <div class="status-label">Done</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="inProgressCount">-</div>
+                    <div class="status-label">In Progress</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="todoCount">-</div>
+                    <div class="status-label">Todo</div>
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <strong>Last Sync:</strong> <span id="lastSync">-</span>
+            </div>
+        </div>
+        
+        <button class="sync-button" id="syncBtn" onclick="syncData()">
+            🔄 Sync from Mission Control JSON
+        </button>
+        
+        <table class="tasks-table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Phase</th>
+                    <th>Due Date</th>
+                    <th>Version</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="tasksBody">
+                <tr>
+                    <td colspan="7" style="text-align: center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="instructions">
+            <strong>📖 How to Use:</strong>
+            <ul>
+                <li>Click "Sync from Mission Control JSON" to refresh data from tasks.json</li>
+                <li>Status is automatically updated when you select from dropdown</li>
+                <li>Statistics update in real-time</li>
+                <li>Last sync shows when data was last updated</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        let tasks = [];
+        
+        async function loadData() {
+            try {
+                // Load tasks
+                const tasksResponse = await fetch('/api/tasks');
+                const tasksData = await tasksResponse.json();
+                tasks = tasksData;
+                
+                // Calculate stats
+                const stats = {
+                    total: tasks.length,
+                    done: tasks.filter(t => t.status === 'done').length,
+                    in_progress: tasks.filter(t => t.status === 'in_progress').length,
+                    todo: tasks.filter(t => t.status === 'todo').length
+                };
+                
+                // Update UI
+                document.getElementById('taskCount').textContent = stats.total;
+                document.getElementById('doneCount').textContent = stats.done;
+                document.getElementById('inProgressCount').textContent = stats.in_progress;
+                document.getElementById('todoCount').textContent = stats.todo;
+                
+                // Render tasks
+                renderTasks();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('tasksBody').innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #ff4757;">
+                            Error loading tasks. Make sure the dev server is running.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function renderTasks() {
+            const tbody = document.getElementById('tasksBody');
+            
+            if (tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center;">No tasks found</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = tasks.map(task => `
+                <tr>
+                    <td>${task.title}</td>
+                    <td>
+                        <span class="status-badge ${task.status}">${task.status}</span>
+                    </td>
+                    <td>
+                        <span class="priority-badge ${task.priority}">${task.priority}</span>
+                    </td>
+                    <td>Phase ${task.phase || 1}</td>
+                    <td>${task.due_date || 'N/A'}</td>
+                    <td>${task.version || 'N/A'}</td>
+                    <td>
+                        <select onchange="updateStatus('${task.id}', this.value)">
+                            <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>Todo</option>
+                            <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="done" ${task.status === 'done' ? 'selected' : ''}>Done</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        async function updateStatus(taskId, newStatus) {
+            try {
+                const response = await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update-status',
+                        data: { taskId, status: newStatus }
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    await loadData();
+                } else {
+                    alert('Error updating status');
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('Error updating status');
+            }
+        }
+        
+        async function syncData() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Syncing...';
+            
+            try {
+                const response = await fetch('/api/sync', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Sync completed successfully!');
+                    await loadData();
+                } else {
+                    alert('❌ Sync failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error syncing:', error);
+                alert('❌ Error syncing: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Sync from Mission Control JSON';
+            }
+        }
+        
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>

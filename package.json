@@ -1,0 +1,31 @@
+{
+  "name": "mission-control",
+  "version": "0.1.0",
+  "description": "A personal command center for tasks, projects, and custom tooling workflows",
+  "private": false,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:init": "node scripts/init-db.js"
+  },
+  "dependencies": {
+    "next": "15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^10.0.3",
+    "eslint-config-next": "^16.1.6",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5"
+  }
+}
